@@ -57,7 +57,7 @@ end
 function asm_to_hm(A::Matrix{Int})
     n = size(A,1)
     h = boundary(n+1)
-    for i in 2:n
+    @inbounds(for i in 2:n
         for j in 2:n
             if A[i-1,j-1] == 0
                 h[i,j] = h[i,j-1]+h[i-1,j]-h[i-1,j-1]
@@ -65,27 +65,27 @@ function asm_to_hm(A::Matrix{Int})
                 h[i,j] = h[i-1,j-1]
             end
         end
-    end
-    h
+    end)
+    return h
 end
 
 function hm_to_asm(h::Matrix{Int})
     n = size(h,1) - 1
     A = zeros(Int, n, n)
-    for i in 1:n
+    @inbounds(for i in 1:n
         for j in 1:n
             d1 = h[i,j+1] - h[i,j]
             d2 = h[i+1,j+1] - h[i+1,j]
             (d1 + d2 == 0) && (A[i,j] = d1)
         end
-    end
-    A
+    end)
+    return A
 end
 
 function six_vertex(h::Matrix{Int})
     n = size(h,1) - 1
     T = zeros(Int, n, n)    # matrix of tiles
-    for i in 1:n
+    @inbounds(for i in 1:n
         for j in 1:n
             tile = view(h,i:i+1,j:j+1)
             x = tile[1]
@@ -100,7 +100,7 @@ function six_vertex(h::Matrix{Int})
             tile[5-k] == x && (k += 4)
             T[i,j] = k
         end
-    end
+    end)
     T
 end
 
@@ -118,7 +118,7 @@ function fpl_arrows(h::Matrix{Int}; anti::Bool = false)
     T = six_vertex(h)
     n = size(T,1)
     fa = Vector{Arrow}()
-    for i in 1:n
+    @inbounds(for i in 1:n
         for j in 1:n
             t = T[i,j]
             if (i+j)%2 == zero
@@ -129,8 +129,8 @@ function fpl_arrows(h::Matrix{Int}; anti::Bool = false)
                 t in (3,4,5) && push!(fa,Arrow([i,j],[0,1]))
             end
         end
-    end
-    fa
+    end)
+    return fa
 end
 
 typealias Point Tuple{Int,Int}
@@ -182,51 +182,71 @@ function fpl_arcs(h::Matrix{Int}; anti::Bool = false)
 end
 
 function borderpoints(n::Int)
-  a = n%2 == 0 ? 1 : 2
-  u = [[(i,0) for i in 1:2:n]; [(n+1,j) for j in a:2:n]]
-  a = n%2 == 0 ? n : n-1
-  u = [u; [(i,n+1) for i in n:-2:1]; [(0,j) for j in a:-2:1]]
+    a = n%2 == 0 ? 1 : 2
+    u = [[(i,0) for i in 1:2:n]; [(n+1,j) for j in a:2:n]]
+    a = n%2 == 0 ? n : n-1
+    u = [u; [(i,n+1) for i in n:-2:1]; [(0,j) for j in a:-2:1]]
 end
 
-function fpl_paths(arc::Vector{Path}, n::Int)
-  d1 = Dict{Point,Vector{Int}}()
-  d2 = Dict{Point,Vector{Int}}()
-  for (i,a) in enumerate(arc)
-    p = a[1]
-    if haskey(d1,p)
-      d1[p][2] = i
-    else
-      d1[p] = [i,i]
+function fpl_paths(arc::Vector{Path}, n::Int; circuits=false)
+    source = Dict{Point,Vector{Int}}()
+    target = Dict{Point,Vector{Int}}()
+    for (i,a) in enumerate(arc)
+        p = a[1]
+        if haskey(source,p)
+            source[p][2] = i
+        else
+            source[p] = [i,i]
+        end
+        p = a[end]
+        if haskey(target,p)
+            target[p][2] = i
+        else
+            target[p] = [i,i]
+        end
     end
-    p = a[end]
-    if haskey(d2,p)
-      d2[p][2] = i
-    else
-      d2[p] = [i,i]
+    visited = falses(arc)
+    v = Vector{Path}()
+    for p in borderpoints(n)
+        i = target[p][1]
+        visited[i] && continue
+        visited[i] = true
+        u = reverse(arc[i])
+        forward = true
+        p = u[end]
+        while 1<=p[1]<=n && 1<=p[2]<=n
+            i,j = forward ? source[p] : target[p]
+            visited[i] && (i = j)
+            a = arc[i]
+            visited[i] = true
+            forward || (a =reverse(a))
+            u = vcat(u, a[2:end])
+            p = a[end]
+            forward = !forward
+        end
+        push!(v,u)
     end
-  end
-  visited = falses(arc)
-  v = Vector{Path}()
-  for p in borderpoints(n)
-    i = d2[p][1]
-    visited[i] && continue
-    u = reverse(arc[i])
-    visited[i] = true
-    forward = true
-    p = u[end]
-    while 1<=p[1]<=n && 1<=p[2]<=n
-      i,j = forward ? d1[p] : d2[p]
-      visited[i] && (i = j)
-      a = arc[i]
-      visited[i] = true
-      forward || (a =reverse(a))
-      u = vcat(u, a[2:end])
-      p = a[end]
-      forward = !forward
+    circuits || return v
+    for (k,b) in enumerate(arc)
+        visited[k] && continue
+        visited[k] = true
+        u = b
+        p0 = u[1]
+        p = u[end]
+        forward = false
+        while p != p0
+            i,j = forward ? source[p] : target[p]
+            visited[i] && (i = j)
+            a = arc[i]
+            visited[i] = true
+            forward || (a =reverse(a))
+            u = vcat(u, a[2:end])
+            p = a[end]
+            forward = !forward
+        end
+        push!(v,u)
     end
-    push!(v,u)
-  end
-  v
+    return v
 end
 
 function latex_arcs(arcs::Vector{Path})
@@ -318,7 +338,7 @@ end
 function inflate(h::Matrix{Int})
     n = size(h,1)
     hplus = boundary(n+1)
-    for i in 2:n
+    @inbounds(for i in 2:n
         for j in 2:n
             x = h[i,j-1]
             y = h[i,j]
@@ -334,14 +354,14 @@ function inflate(h::Matrix{Int})
                 hplus[i,j] = -1
             end
         end
-    end
+    end)
     hplus
 end
 
 function deflate(h::Matrix{Int})
     n = size(h,1)
     hminus = boundary(n-1)
-    for i in 2:n-2
+    @inbounds(for i in 2:n-2
         for j in 2:n-2
             x = h[i,j]
             y = h[i,j+1]
@@ -357,7 +377,7 @@ function deflate(h::Matrix{Int})
                 hminus[i,j] = -1
             end
         end
-    end
+    end)
     hminus
 end
 
@@ -446,17 +466,18 @@ function markov_coupled!(h1::Matrix{Int}, h2::Matrix{Int})
 end
 
 function forward_sample(n; verbose=0)
-    h1, h2 = min_hm(n),max_hm(n)
+    h1, h2 = min_hm(n), max_hm(n)
     k = 0
     while h1 != h2
         k += 1
         markov_coupled!(h1,h2)
-        if n<8 && verbose>1
+        if n < 8 && verbose > 1
             println("$h1 $k")
             println("$h2")
         end
     end
-    verbose>0 ? (h1,k) : h1
+    verbose > 0 && println("$k steps")
+    return h1
 end
 
 function backward_sample(n; verbose=0)
@@ -473,18 +494,21 @@ function backward_sample(n; verbose=0)
     end
     for pass in 1:pmax
         p = pass
-        h1, h2 = min_hm(n),max_hm(n)
+        h1, h2 = min_hm(n), max_hm(n)
         while p > 0
             srand(seed[p])
             r = run[p]
-            verbose>1 && println("$p, $r :")
+            verbose > 1 && println("$p, $r :")
             for k in 1:r
                 markov_coupled!(h1,h2)
-                verbose>1 && println()
+                verbose > 1 && println()
             end
             p -= 1
         end
-        h1 == h2 && return verbose>0 ? (h1, run[pass:-1:1]) : h1
+        if h1 == h2
+          verbose > 0 && println(run[pass:-1:1])
+          return h1
+        end
     end
 end
 
