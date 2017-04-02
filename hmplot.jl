@@ -24,7 +24,7 @@ alpha(h)
 rated=sort([(i,length(p)-1) for (i,p) in enumerate(v)],
   by=x->x[2],rev=true)
 reshape(rated[1:30],5,6)
-hue=["red","green","green","blue","blue","blue","blue","green"]
+hue=["red","blue","green","blue","green","green","green","red"]
 
 for i in 1:8
   j = rated[i][1]
@@ -37,7 +37,7 @@ end
 
 track=(119,"green")
 track=(119,"red")
-track=(179,"blue")
+track=(263,"red")
 path=v[track[1]]
 plt.plot(
   [p[2] for p in path],

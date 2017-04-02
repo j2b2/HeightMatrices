@@ -10,8 +10,26 @@ println(p4)
 14731/2^16
 1-pi/4
 
-n=64
-h=backward_sample(n)
+c=zeros(Int,24,24,6)
+begin
+    n=128
+    for k in 1:10
+        @time h=backward_sample(n,verbose=1)
+        t=view(six_vertex(h), 53:76, 53:76)
+        for i in 1:24
+            for j in 1:24
+                c[i,j,t[i,j]]+=1
+            end
+        end
+    end
+end
+sum(c)
+s1=sum(c,1)
+s12=sum(c,(1,2))
+for k in 1:6 println(k,s1[:,:,k],s12[:,:,k]) end
+s[:,:,1]
+sum(c,(1,2))
+
 u=fpl_arcs(h)
 v=fpl_paths(u,n)
 println(sort([length(t)-1 for t in v]))
