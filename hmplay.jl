@@ -7,45 +7,35 @@ alpha(h)
 p4=corners(six_vertex(h))
 println(p4)
 [sum(p) for p in p4]
-14731/2^16
-1-pi/4
 
-c=zeros(Int,24,24,6)
+n=256
+m=24
+c=zeros(Int,m,m,6)
 begin
-    n=128
-    for k in 1:10
+    m2=div(m,2)
+    n2=div(n,2)
+    for k in 1:4
         @time h=backward_sample(n,verbose=1)
-        t=view(six_vertex(h), 53:76, 53:76)
-        for i in 1:24
-            for j in 1:24
+        t=view(six_vertex(h), n2-m2+1:n2+m2, n2-m2+1:n2+m2)
+        for i in 1:m
+            for j in 1:m
                 c[i,j,t[i,j]]+=1
             end
         end
+        s1=sum(c,1)
+        s12=sum(c,(1,2))
+        for k in 1:6 println(k,s1[:,:,k],s12[:,:,k]) end
     end
 end
-sum(c)
-s1=sum(c,1)
+
 s12=sum(c,(1,2))
 for k in 1:6 println(k,s1[:,:,k],s12[:,:,k]) end
-s[:,:,1]
-sum(c,(1,2))
 
-u=fpl_arcs(h)
-v=fpl_paths(u,n)
-println(sort([length(t)-1 for t in v]))
-println(latex_arcs(u))
-large=[(i,length(t)-1) for (i,t) in enumerate(v) if length(t)>300]
-sort(large,by=x->x[2])
+c12=view(c,7:18,7:18,:)
+s1=sum(c12,1)
+s12=sum(c12,(1,2))
+for k in 1:6 println(k,s1[:,:,k],s12[:,:,k]) end
 
-v=fpl_paths(u,n,circuits=true)
-v[65]
-
-i=65;println(latex_path(v[i]))
-v[i][[1,end]]
-
-mean(length(a)-1 for a in u)
-sum(length(a)-1 for a in u)
-2^14
 d=testsample(forward_sample,3,11200)
 
 using BenchmarkTools
@@ -60,3 +50,17 @@ using BenchmarkTools
 
 @code_native boundary(5)
 @code_warntype boundary(5)
+
+using Primes
+factor(11520)
+
+include("hmplot.jl")
+hue
+n=128
+@time h=backward_sample(n,verbose=1)
+plot_reset(n)
+plot_fpl(h)
+plot_vertices(h, markersize=20)
+plot_vertices(h, [1,4,5,6])
+plot_vertices(h, 2)
+hue[3]="green"
