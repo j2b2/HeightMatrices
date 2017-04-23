@@ -57,8 +57,8 @@ end
 function asm_to_hm(A::Matrix{Int})
     n = size(A,1)
     h = boundary(n+1)
-    @inbounds(for i in 2:n
-        for j in 2:n
+    @inbounds(for j in 2:n
+        for i in 2:n
             if A[i-1,j-1] == 0
                 h[i,j] = h[i,j-1]+h[i-1,j]-h[i-1,j-1]
             else
@@ -72,8 +72,8 @@ end
 function hm_to_asm(h::Matrix{Int})
     n = size(h,1) - 1
     A = zeros(Int, n, n)
-    @inbounds(for i in 1:n
-        for j in 1:n
+    @inbounds(for j in 1:n
+        for i in 1:n
             d1 = h[i,j+1] - h[i,j]
             d2 = h[i+1,j+1] - h[i+1,j]
             (d1 + d2 == 0) && (A[i,j] = d1)
@@ -85,8 +85,8 @@ end
 function six_vertex(h::Matrix{Int})
     n = size(h,1) - 1
     T = zeros(Int, n, n)    # matrix of tiles
-    @inbounds(for i in 1:n
-        for j in 1:n
+    @inbounds(for j in 1:n
+        for i in 1:n
             tile = view(h,i:i+1,j:j+1)
             x = tile[1]
             k = 1
@@ -101,7 +101,20 @@ function six_vertex(h::Matrix{Int})
             T[i,j] = k
         end
     end)
-    T
+    return T
+end
+
+function toggles(h::Matrix{Int}, parity = 2)
+    n = size(h,1)
+    T = zeros(Int, n, n)    # matrix of toggles
+    @inbounds(for j in 2:n-1
+        for i in 2:n-1
+            parity < 2 && (i+j) % 2 != parity && continue
+            y = h[i-1,j]
+            y == h[i+1,j] && y == h[i,j-1] && y == h[i,j+1] && (T[i,j] = y)
+        end
+    end)
+    return T
 end
 
 immutable Arrow
@@ -188,7 +201,7 @@ function borderpoints(n::Int)
     u = [u; [(i,n+1) for i in n:-2:1]; [(0,j) for j in a:-2:1]]
 end
 
-function fpl_paths(arc::Vector{Path}, n::Int; circuits=false)
+function fpl_paths(arc::Vector{Path}, n::Int; circuit=false)
     source = Dict{Point,Vector{Int}}()
     target = Dict{Point,Vector{Int}}()
     for (i,a) in enumerate(arc)
@@ -226,7 +239,7 @@ function fpl_paths(arc::Vector{Path}, n::Int; circuits=false)
         end
         push!(v,u)
     end
-    circuits || return v
+    circuit || return v
     for (k,b) in enumerate(arc)
         visited[k] && continue
         visited[k] = true
@@ -443,10 +456,10 @@ function dict_hm(n::Int)
 end
 
 function toggle!(h::Matrix{Int}, i, j, delta)
-    y = h[i-1,j]
-    if y == h[i+1,j] && y == h[i,j-1] && y == h[i,j+1]
+    @inbounds y = h[i-1,j]
+    @inbounds(if y == h[i+1,j] && y == h[i,j-1] && y == h[i,j+1]
         h[i,j] = y + delta
-    end
+    end)
 end
 
 function markov_coupled!(h1::Matrix{Int}, h2::Matrix{Int})
@@ -465,6 +478,26 @@ function markov_coupled!(h1::Matrix{Int}, h2::Matrix{Int})
     end
 end
 
+# function markov_coupled!(h1::Matrix{Int}, h2::Matrix{Int})
+#     n = size(h1,1)
+#     for parity in 0:1
+#         T1 = toggles(h1, parity)
+#         T2 = toggles(h2, parity)
+#         @inbounds(for j in 2:n-1
+#             for i in 2:n-1
+#                 if (i+j)%2 == parity
+#                     delta = rand([-1,1])
+#                     # print("$delta ")
+#                     y = T1[i,j]
+#                     y > 0 && (h1[i,j] = y + delta)
+#                     y = T2[i,j]
+#                     y > 0 && (h2[i,j] = y + delta)
+#                 end
+#             end
+#         end)
+#     end
+# end
+
 function forward_sample(n; verbose=0)
     h1, h2 = min_hm(n), max_hm(n)
     k = 0
@@ -480,13 +513,14 @@ function forward_sample(n; verbose=0)
     return h1
 end
 
-function backward_sample(n; verbose=0)
+function backward_sample(n, coeff = 1; verbose = 0)
     const pmax = 10
     seed = rand(UInt32, pmax)
     # n2 = div(n*n, 4)
     n2 = div(n*n, 2)
     r = 4
     while r < n2; r *= 2 end
+    r *= coeff
     run = [r]
     for p in 1:pmax-1
         push!(run, r)
@@ -515,7 +549,7 @@ end
 function testsample(sample, n, k)
     d = Dict{Matrix{Int}, Int}()
     for i in 1:k
-        h,t = sample(n)
+        h = sample(n)
         h = hm_to_asm(h)
         if haskey(d,h)
             d[h]+=1

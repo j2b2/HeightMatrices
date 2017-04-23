@@ -1,9 +1,23 @@
 include("hm.jl")
 
-h=asm_to_hm([0 0 1 0; 1 0 -1 1; 0 1 0 0; 0 0 1 0])
-hm_to_asm(h)
-h2=inflate(h)
-alpha(h)
+d=testsample(backward_sample,5,42900)
+
+include("hmplot.jl")
+hue6
+n=128
+@time h=backward_sample(n,4,verbose=1)
+plot_fpl(h)
+plot_paths(h,1:7)
+plot_paths(h,9,"green")
+plot_paths(h,10,"lime")
+plot_vertices(h, 5:6)
+plot_vertices(h, 2:3)
+plot_toggles(h)
+plt.cla()
+hue=["red","green","blue","red","blue","blue"]
+
+u=fpl_arcs(h)
+
 p4=corners(six_vertex(h))
 println(p4)
 [sum(p) for p in p4]
@@ -36,31 +50,18 @@ s1=sum(c12,1)
 s12=sum(c12,(1,2))
 for k in 1:6 println(k,s1[:,:,k],s12[:,:,k]) end
 
-d=testsample(forward_sample,3,11200)
-
+@time h=backward_sample(64)
 using BenchmarkTools
 @benchmark six_vertex(h)
-@benchmark fpl_arcs(h)
-@benchmark fpl_paths(u,n)
-@benchmark inflate(h)
+@benchmark asm_to_hm(hm_to_asm(h))
+@benchmark toggles(h)
+print_matrix(h)
+print_matrix(toggles(h))
 
-@time forward_sample(32)
-@time backward_sample(64)
-@time backward_sample(128)
 
 @code_native boundary(5)
 @code_warntype boundary(5)
 
 using Primes
 factor(11520)
-
-include("hmplot.jl")
-hue
-n=128
-@time h=backward_sample(n,verbose=1)
-plot_reset(n)
-plot_fpl(h)
-plot_vertices(h, markersize=20)
-plot_vertices(h, [1,4,5,6])
-plot_vertices(h, 2)
-hue[3]="green"
+"abc"*"cde"
