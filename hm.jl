@@ -297,7 +297,8 @@ function latex_path(trail::Path)
     command = command[1:end-4] * ";\n"
 end
 
-function corners(T::Matrix{Int})
+function corners(h::Matrix{Int})
+    T = six_vertex(h)
     n = size(T,1)
     p1 = Vector{Int}()
     p = zeros(Int,n)
@@ -343,9 +344,28 @@ function corners(T::Matrix{Int})
     p1,p2,p3,p4
 end
 
-function alpha(h::Matrix{Int})
+function center(h::Matrix{Int}, m = 0)
+    T = six_vertex(h)
+    n = size(T, 1)
+    n2 = div(n, 2)
+    m == 0 && (m = n2)
+    m2 = div(m, 2)
+    c = zeros(Int, 6)
+    for i in n2 - m2 : n2 + m2
+        for j in n2 - m2 : n2 + m2
+            c[T[i,j]] +=1
+        end
+    end
+    c
+end
+
+function alpha(h::Matrix{Int}, entry = 2)
     A = hm_to_asm(h)
-    count(i->i<0, A)
+    if entry in [-1, 1]
+        countnz(A .== entry)
+    else
+        countnz(A)
+    end
 end
 
 function inflate(h::Matrix{Int})

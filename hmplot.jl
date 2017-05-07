@@ -1,6 +1,6 @@
 import PyPlot
 plt = PyPlot
-plt.ion();plt.figure("FPL", figsize=(10,10))
+plt.ion();plt.figure("ASM", figsize=(10,10))
 plt.subplots_adjust(left=0.04, right=0.98, bottom=0.03, top=0.97)
 
 function plot_fpl(h::Matrix{Int}; color = "blue", linewidth = 0.8)
@@ -45,13 +45,13 @@ function plot_toggles(h::Matrix{Int}, parity = 2; markersize = 0)
 end
 
 hue = ["red","green","blue"]
-function plot_paths(h::Matrix{Int}, range_paths = 1:3, color = ""; linewidth = 1.4)
+function plot_path(h::Matrix{Int}, range_paths = 1:3, color = ""; linewidth = 1.4)
     n = size(h, 1) - 1
     plt.axis([-0.5, n + 1.5, -0.5, n + 1.5])
     u = fpl_arcs(h)
     v = fpl_paths(u, n, circuit=true)
     rated = sort([(i,length(p)-1) for (i,p) in enumerate(v)],
-        by=x->x[2],rev=true)
+        by = x->x[2],rev = true)
     for i in range_paths
         j = rated[i][1]
         path = v[j]
