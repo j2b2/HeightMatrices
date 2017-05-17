@@ -117,6 +117,40 @@ function toggles(h::Matrix{Int}, parity = 2)
     return T
 end
 
+function half_gyration!(h::Matrix{Int}, parity)
+    T = toggles(h, parity)
+    for i in find(T)
+        y = T[i]
+        delta = h[i] - y
+        h[i] = y - delta
+    end
+    return h
+end
+
+function half_gyration(h::Matrix{Int}, parity)
+    g = copy(h)
+    half_gyration!(g, parity)
+end
+
+function gyration!(h::Matrix{Int}, n = 1)
+    if n > 0
+        parity = 1
+    else
+        parity = 0
+        n = -n
+    end
+    for i in 1:n
+        half_gyration!(h, parity)
+        half_gyration!(h, 1 - parity)
+    end
+    return h
+end
+
+function gyration(h::Matrix{Int}, n = 1)
+    g = copy(h)
+    gyration!(g, n)
+end
+
 immutable Arrow
     source::Vector{Int}
     direction::Vector{Int}
@@ -201,7 +235,7 @@ function borderpoints(n::Int)
     u = [u; [(i,n+1) for i in n:-2:1]; [(0,j) for j in a:-2:1]]
 end
 
-function fpl_paths(arc::Vector{Path}, n::Int; circuit=false)
+function fpl_paths(arc::Vector{Path}, n::Int; circuit::Bool = false)
     source = Dict{Point,Vector{Int}}()
     target = Dict{Point,Vector{Int}}()
     for (i,a) in enumerate(arc)
