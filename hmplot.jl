@@ -8,7 +8,7 @@ function plot_fpl(h::Matrix{Int};
     n = size(h, 1)
     plt.axis([-0.5, n + 0.5, -0.5, n + 0.5])
     u = fpl_arcs(h, anti = anti)
-    circuit || (u = fpl_paths(u, n - 1))
+    circuit || (u = fpl_paths(h, anti = anti))
     for arc in u
         plt.plot([p[2] for p in arc],[n - p[1] for p in arc],
             color = color, linewidth = linewidth)
@@ -21,8 +21,7 @@ function plot_path(h::Matrix{Int}, range_paths = 1:3, color = "";
     linewidth = 1.4, circuit = true)
     n = size(h, 1) - 1
     plt.axis([-0.5, n + 1.5, -0.5, n + 1.5])
-    u = fpl_arcs(h)
-    v = fpl_paths(u, n, circuit = circuit)
+    v = fpl_paths(h, circuit = circuit)
     rated = sort([(i,length(p)-1) for (i,p) in enumerate(v)],
         by = x->x[2],rev = true)
     lr = rated[range_paths]
@@ -42,7 +41,7 @@ function plot_path(h::Matrix{Int}, range_paths = 1:3, color = "";
     return rated
 end
 
-hue6 = ["grey", "gold", "cyan", "green", "red", "blue"]
+hue6 = ["silver", "gold", "cyan", "green", "red", "blue"]
 function plot_vertices(h::Matrix{Int}, range_vertices = 5:6; markersize = 0)
     n = size(h, 1)
     plt.axis([-0.5, n + 0.5, -0.5, n + 0.5])
@@ -50,7 +49,7 @@ function plot_vertices(h::Matrix{Int}, range_vertices = 5:6; markersize = 0)
     T = six_vertex(h)
     for t in range_vertices
         y, x, b = findnz(T .== t)
-        plt.scatter(x, n-y, s=markersize, color=hue6[t])
+        plt.scatter(x, n-y, s = markersize, color = hue6[t])
     end
     return T
 end
@@ -62,12 +61,12 @@ function plot_toggles(h::Matrix{Int}, parity = 2; markersize = 0)
     if parity in [0, 2]
         T = toggles(h, 0)
         y, x, t = findnz(T)
-        plt.scatter(x - 0.5, n + 0.5 - y, s = markersize, color = "red")
+        plt.scatter(x - 0.5, n + 0.5 - y, s = markersize, color = hue6[5])
     end
     if parity in [1, 2]
         T = toggles(h, 1)
         y, x, t = findnz(T)
-        plt.scatter(x - 0.5, n + 0.5 - y, s = markersize, color = "blue")
+        plt.scatter(x - 0.5, n + 0.5 - y, s = markersize, color = hue6[6])
     end
     return T
 end

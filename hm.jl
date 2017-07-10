@@ -1,5 +1,12 @@
 module hm
 
+"""
+    boundary(n)
+
+Compute a `n`x`n` matrix, where first/last row/column
+satisfy the *boundary condition* for an height matrix.
+Other entries (internal entries) are zero.
+"""
 function boundary(n::Int)
     h = zeros(Int, n, n)
     for i in 1:n
@@ -11,6 +18,11 @@ function boundary(n::Int)
     h
 end
 
+"""
+    min_hm(n)
+
+Compute the minimal heigth matrix of order `n`.
+"""
 function min_hm(n::Int)
     h = zeros(Int, n+1, n+1)
     for k = 1:n
@@ -22,6 +34,11 @@ function min_hm(n::Int)
     h
 end
 
+"""
+    max_hm(n)
+
+Compute the maximal heigth matrix of order `n`.
+"""
 function max_hm(n::Int)
     h = zeros(Int, n+1, n+1)
     for i = 1:n+1
@@ -36,6 +53,11 @@ function max_hm(n::Int)
     h
 end
 
+"""
+    join_hm(h1, h2)
+
+Compute the join of two heigth matrices of same order.
+"""
 function join_hm(h1::Matrix{Int}, h2::Matrix{Int})
     h = copy(h1)
     for k in eachindex(h)
@@ -45,6 +67,11 @@ function join_hm(h1::Matrix{Int}, h2::Matrix{Int})
     h
 end
 
+"""
+    meet_hm(h1, h2)
+
+Compute the meet of two heigth matrices of same order.
+"""
 function meet_hm(h1::Matrix{Int}, h2::Matrix{Int})
     h = copy(h1)
     for k in eachindex(h)
@@ -54,6 +81,12 @@ function meet_hm(h1::Matrix{Int}, h2::Matrix{Int})
     h
 end
 
+"""
+    asm_to_hm(A)
+
+Compute the height-function matrix corresponding
+to the alternating-sign matrix `A`.
+"""
 function asm_to_hm(A::Matrix{Int})
     n = size(A,1)
     h = boundary(n+1)
@@ -69,6 +102,12 @@ function asm_to_hm(A::Matrix{Int})
     return h
 end
 
+"""
+    hm_to_asm(h)
+
+Compute the alternating-sign matrix corresponding
+to the height-function matrix `h`.
+"""
 function hm_to_asm(h::Matrix{Int})
     n = size(h,1) - 1
     A = zeros(Int, n, n)
@@ -82,6 +121,15 @@ function hm_to_asm(h::Matrix{Int})
     return A
 end
 
+"""
+    six_vertex(h)
+
+For a height-function matrix `h` or order `n`,
+compute the `n`x`n` matrix of the six types of tiles.
+Entries between 1 and 4 correspond to an entry 0
+in the asm associated to `h`, entries 5 and 6
+correspond to entries 1 and -1 in the asm.
+"""
 function six_vertex(h::Matrix{Int})
     n = size(h,1) - 1
     T = zeros(Int, n, n)    # matrix of tiles
@@ -104,6 +152,18 @@ function six_vertex(h::Matrix{Int})
     return T
 end
 
+"""
+    toggles(h, parity)
+
+Compute the matrix `T` of toggles for the height-function matrix `h`.
+A toggle is an entry of `h` whose the four neighbours share the same
+value `y`; hence `h[i,j]=y±1`, and by convention `T[i,j]=y`.
+
+If `parity=0` (resp. 1), only toggles
+whose *position* is even (resp.odd) are
+computed, other entries in `T` are zeros.
+If `parity=2` (default value), all toggles are computed.
+"""
 function toggles(h::Matrix{Int}, parity = 2)
     n = size(h,1)
     T = zeros(Int, n, n)    # matrix of toggles
@@ -117,6 +177,12 @@ function toggles(h::Matrix{Int}, parity = 2)
     return T
 end
 
+"""
+    half_gyration!(h, parity)
+
+Switch every toggle of the height-function matrix `h`,
+according to the chosen parity (0 or 1).
+"""
 function half_gyration!(h::Matrix{Int}, parity)
     T = toggles(h, parity)
     for i in find(T)
@@ -127,11 +193,24 @@ function half_gyration!(h::Matrix{Int}, parity)
     return h
 end
 
+"""
+    half_gyration(h, parity)
+
+Same as `half_gyration!`, but return a new matrix, `h` is left
+unaffected.
+"""
 function half_gyration(h::Matrix{Int}, parity)
     g = copy(h)
     half_gyration!(g, parity)
 end
 
+"""
+    gyration!(h, n)
+
+Perform a *Wieland* gyration on the height-function matrix `h`,
+that is rotated `n` times (default `n=1`)
+counter-clockwise.
+"""
 function gyration!(h::Matrix{Int}, n = 1)
     if n > 0
         parity = 1
@@ -146,43 +225,70 @@ function gyration!(h::Matrix{Int}, n = 1)
     return h
 end
 
+"""
+    gyration!(h, n)
+
+Same as `gyration!`, but return a new matrix, `h` is left
+unaffected.
+"""
 function gyration(h::Matrix{Int}, n = 1)
     g = copy(h)
     gyration!(g, n)
 end
 
-immutable Arrow
-    source::Vector{Int}
-    direction::Vector{Int}
-end
+# struct Arrow
+#     source::Vector{Int}
+#     direction::Vector{Int}
+# end
+#
+# function Base.show(io::IO, a::Arrow)
+#     print(io, a.source, "->", a.direction)
+# end
+#
+# """
+#     fpl_arrows(h)
+#     fpl_arrows(h, anti = true)
+#
+# Return a vector of all the arrows that compose the fpl
+# (fully packed loop) associated to the hm `h`.
+# Return the complementary set of arrows,
+# that compose the anti-fpl, if requested by the keyword `anti`.
+# """
+# function fpl_arrows(h::Matrix{Int}; anti::Bool = false)
+#     zero = anti?1:0
+#     T = six_vertex(h)
+#     n = size(T,1)
+#     fa = Vector{Arrow}()
+#     @inbounds(for i in 1:n
+#         for j in 1:n
+#             t = T[i,j]
+#             if (i+j)%2 == zero
+#                 t in (1,3,5) && push!(fa,Arrow([i,j],[-1,0]))
+#                 t in (2,4,5) && push!(fa,Arrow([i,j],[1,0]))
+#             else
+#                 t in (1,2,5) && push!(fa,Arrow([i,j],[0,-1]))
+#                 t in (3,4,5) && push!(fa,Arrow([i,j],[0,1]))
+#             end
+#         end
+#     end)
+#     return fa
+# end
 
-function Base.show(io::IO, a::Arrow)
-    print(io, a.source, "->", a.direction)
-end
+const Point = Tuple{Int,Int}
+const Path = Vector{Point}
 
-function fpl_arrows(h::Matrix{Int}; anti::Bool = false)
-    zero = anti?1:0
-    T = six_vertex(h)
-    n = size(T,1)
-    fa = Vector{Arrow}()
-    @inbounds(for i in 1:n
-        for j in 1:n
-            t = T[i,j]
-            if (i+j)%2 == zero
-                t in (1,3,5) && push!(fa,Arrow([i,j],[-1,0]))
-                t in (2,4,5) && push!(fa,Arrow([i,j],[1,0]))
-            else
-                t in (1,2,5) && push!(fa,Arrow([i,j],[0,-1]))
-                t in (3,4,5) && push!(fa,Arrow([i,j],[0,1]))
-            end
-        end
-    end)
-    return fa
-end
+"""
+    fpl_arcs(h)
+    fpl_arcs(h, anti = true)
 
-typealias Point Tuple{Int,Int}
-typealias Path Vector{Point}
-
+Return a vector of all the arcs that compose the fpl
+(fully packed loop) associated to the hm `h`.
+Each arc is a vector of points `(i,j)`, that
+starts from an entry 1 in the corresponding asm,
+and stops when meeting an entry -1, or the boundary.
+Return the arcs that compose the anti-fpl,
+if requested by the keyword `anti`.
+"""
 function fpl_arcs(h::Matrix{Int}; anti::Bool = false)
     zero = anti?1:0
     T = six_vertex(h)
@@ -235,9 +341,23 @@ function borderpoints(n::Int)
     u = [u; [(i,n+1) for i in n:-2:1]; [(0,j) for j in a:-2:1]]
 end
 
-function fpl_paths(arc::Vector{Path}, n::Int; circuit::Bool = false)
+"""
+    fpl_paths(h [, anti = true] [, circuit = true])
+
+Return a vector of all the paths that compose the fpl
+associated to the hm `h`.
+Each path is a vector of points `(i,j)`, which joins
+two external points, unless we choose `circuit = true`.
+In the latter case, some paths are closed circuits.
+Return the paths that compose the anti-fpl,
+if requested by the keyword `anti`.
+"""
+
+function fpl_paths(h::Matrix{Int}; anti::Bool = false, circuit::Bool = false)
     source = Dict{Point,Vector{Int}}()
     target = Dict{Point,Vector{Int}}()
+    arc = fpl_arcs(h, anti = anti)
+    n = size(h, 1) - 1
     for (i,a) in enumerate(arc)
         p = a[1]
         if haskey(source,p)
@@ -296,6 +416,12 @@ function fpl_paths(arc::Vector{Path}, n::Int; circuit::Bool = false)
     return v
 end
 
+"""
+    latex_arcs(arcs)
+
+Return latex commands that may be inserted in a tikz picture,
+to draw a set (vector) of (oriented) arcs.
+"""
 function latex_arcs(arcs::Vector{Path})
     command = ""
     for a in arcs
@@ -320,6 +446,12 @@ function latex_arcs(arcs::Vector{Path})
     command
 end
 
+"""
+    latex_path(path)
+
+Return a latex command that may be inserted in a tikz picture,
+to draw a (non oriented) path.
+"""
 function latex_path(trail::Path)
     command = "\\draw [path] "
     for p in trail
@@ -393,6 +525,15 @@ function center(h::Matrix{Int}, m = 0)
     c
 end
 
+"""
+    alpha(h, entry)
+
+Return the number of entries -1 (resp. 1) in the asm
+associated to the hm `h`. If `entry` is neither -1
+nor 1, return the total number of entries -1 and 1.
+Note that `alpha(h,1) = alpha(h,-1) + n` if `h`
+is of order `n`.
+"""
 function alpha(h::Matrix{Int}, entry = 2)
     A = hm_to_asm(h)
     if entry in [-1, 1]
@@ -402,6 +543,14 @@ function alpha(h::Matrix{Int}, entry = 2)
     end
 end
 
+"""
+    inflate(h)
+
+Return a pseudo-hm of order `n+1` after inflation of a hm `h`
+of order `n`; this pseudo-hm codes a segment of hm's,
+where some entries are toggles; such undefined entries
+are coded by negative integers.
+"""
 function inflate(h::Matrix{Int})
     n = size(h,1)
     hplus = boundary(n+1)
@@ -418,13 +567,21 @@ function inflate(h::Matrix{Int})
             if y < x
                 hplus[i,j] = x
             else
-                hplus[i,j] = -1
+                hplus[i,j] = -y
             end
         end
     end)
     hplus
 end
 
+"""
+    deflate(h)
+
+Return a pseudo-hm of order `n-1` after deflation of a hm `h`
+of order `n`; this pseudo-hm codes a segment of hm's,
+where some entries are toggles; such undefined entries
+are coded by negative integers.
+"""
 function deflate(h::Matrix{Int})
     n = size(h,1)
     hminus = boundary(n-1)
@@ -441,44 +598,70 @@ function deflate(h::Matrix{Int})
             if y < x
                 hminus[i,j] = y
             else
-                hminus[i,j] = -1
+                hminus[i,j] = -x
             end
         end
     end)
     hminus
 end
 
+"""
+    segment_bottom(h)
+
+Return the minimal hm in a segment coded by the pseudo-hm `h`,
+where toggles are coded by negative integers.
+"""
 function segment_bottom(h::Matrix{Int})
     h2 = copy(h)
     i = find(h .< 0)
-    h2[i] = h2[i .- 1] .- 1
+    h2[i] = -h2[i] .- 1
     h2
 end
 
+"""
+    segment_top(h)
+
+Return the maximal hm in a segment coded by the pseudo-hm `h`.
+"""
 function segment_top(h::Matrix{Int})
     h2 = copy(h)
     i = find(h .< 0)
-    h2[i] = h2[i .- 1] .+ 1
+    h2[i] = -h2[i] .+ 1
     h2
 end
 
+"""
+    segment_elt(h, k)
+
+Return the kth hm in a segment coded by the pseudo-hm `h`.
+"""
 function segment_elt(h::Matrix{Int}, k::Int)
     h2 = copy(h)
     i = find(h .< 0)
     # eps .= 2 .* Base.digits(k, 2, length(i)) .- 1
     eps = 2 * Base.digits(k-1, 2, length(i)) - 1
-    h2[i] = h2[i .- 1] .+ eps
+    h2[i] = -h2[i] .+ eps
     h2
 end
 
+"""
+    segment_rand(h)
+
+Return a random hm in a segment coded by the pseudo-hm `h`.
+"""
 function segment_rand(h::Matrix{Int})
     h2 = copy(h)
     i = find(h .< 0)
     eps = rand([-1,1], length(i))
-    h2[i] = h2[i .- 1] .+ eps
+    h2[i] = -h2[i] .+ eps
     h2
 end
 
+"""
+    rand_inflations(n)
+
+Return a random (biased) hm, generated by `n` random inflations.
+"""
 function rand_inflations(n)
     h = [0 1; 1 0]
     for i = 1:n-1
@@ -487,26 +670,32 @@ function rand_inflations(n)
     h
 end
 
+"""
+    dict_hm(n)
+
+Return a dictionary of all hm's generated by `n` inflations
+(`n` must be small), with their frequencies.
+"""
 function dict_hm(n::Int)
     h = [0 1; 1 0]
-    D = [Dict{Matrix{Int}, Int}(h => 1)]
+    d = Dict{Matrix{Int}, Int}(h => 1)
     for k = 2:n
-        push!(D,Dict{Matrix{Int}, Int}())
-        d = D[k]
-        for h in keys(D[k-1])
+        d1 = Dict{Matrix{Int}, Int}()
+        for h in keys(d)
             seg = inflate(h)
-            j = count(i->i<0,seg)
+            j = count(i -> i<0, seg)
             for i in 1:2^j
-                h1 = segment_elt(seg,i)
-                if haskey(d,h1)
-                    d[h1] += 1
+                h1 = segment_elt(seg, i)
+                if haskey(d1, h1)
+                    d1[h1] += 1
                 else
-                    d[h1] = 1
+                    d1[h1] = 1
                 end
             end
         end
+        d = d1
     end
-    D
+    return d
 end
 
 function toggle!(h::Matrix{Int}, i, j, delta)
@@ -552,7 +741,18 @@ end
 #     end
 # end
 
-function forward_sample(n; verbose=0)
+"""
+    forward_sample(n [,verbose = k])
+
+Return a (biased) random hm or order `n`,
+using a random sequence of Markov moves,
+applied to minimal (rep. maximal) hms,
+until the resulting hm is the same.
+Optional keyword argument `verbose` (default 0)
+may be used to trace execution of the algorithm,
+when `n` is small.
+"""
+function forward_sample(n; verbose = 0)
     h1, h2 = min_hm(n), max_hm(n)
     k = 0
     while h1 != h2
@@ -567,6 +767,17 @@ function forward_sample(n; verbose=0)
     return h1
 end
 
+"""
+    backward_sample(n [,coeff] [,verbose = k])
+
+Return a (unbiased) random hm or order `n`,
+using *coupling from the past*.
+The initial number of Markov moves
+may be multiplied by `coeff` (default 1).
+Optional keyword argument `verbose` (default 0)
+may be used to trace execution of the algorithm,
+when `n` is small.
+"""
 function backward_sample(n, coeff = 1; verbose = 0)
     const pmax = 10
     seed = rand(UInt32, pmax)
