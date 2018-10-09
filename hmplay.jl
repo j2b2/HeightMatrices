@@ -1,12 +1,14 @@
-include("hm.jl")
+# include("hm.jl")
+using hm
 # julia set working module -> hm
 using HDF5
+h=h5read("/home/betrema/Julia/ASM/save/256-07.h5","hm")
 h=h5read("save/256-07.h5","hm")
 
-@time h=backward_sample(256,4,verbose=1)
-h5write("save/256-08.h5","hm",h)
-countnz.([toggles(h,i) for i in 0:1])
-countnz(toggles(h,2))/2^16
+@time h=backward_sample(128,4,verbose=1)
+h5write("/home/betrema/Julia/ASM/save/128-03.h5","hm",h)
+count.(!iszero, [toggles(h,i) for i in 0:1])
+count(!iszero, toggles(h,2))/2^16
 [alpha(h,i) for i in [-1,1]]
 alpha(h,0)/2^16
 

@@ -48,8 +48,11 @@ function plot_vertices(h::Matrix{Int}, range_vertices = 5:6; markersize = 0)
     markersize == 0 && (markersize = div(1000, n))
     T = six_vertex(h)
     for t in range_vertices
-        y, x, b = findnz(T .== t)
-        plt.scatter(x, n-y, s = markersize, color = hue6[t])
+        i = findall(T .== t)
+        x = getindex.(i, 2)
+        y = getindex.(i, 1)
+        t = T[i]
+        plt.scatter(x, n .- y, s = markersize, color = hue6[t])
     end
     return T
 end
@@ -60,13 +63,18 @@ function plot_toggles(h::Matrix{Int}, parity = 2; markersize = 0)
     markersize == 0 && (markersize = div(1000, n))
     if parity in [0, 2]
         T = toggles(h, 0)
-        y, x, t = findnz(T)
-        plt.scatter(x - 0.5, n + 0.5 - y, s = markersize, color = hue6[5])
+        # y, x, t = findnz(T)
+        i = findall(!iszero, T)
+        x = getindex.(i, 2)
+        y = getindex.(i, 1)
+        plt.scatter(x .- 0.5, n .+ 0.5 .- y, s = markersize, color = hue6[5])
     end
     if parity in [1, 2]
         T = toggles(h, 1)
-        y, x, t = findnz(T)
-        plt.scatter(x - 0.5, n + 0.5 - y, s = markersize, color = hue6[6])
+        i = findall(!iszero, T)
+        x = getindex.(i, 2)
+        y = getindex.(i, 1)
+        plt.scatter(x .- 0.5, n .+ 0.5 .- y, s = markersize, color = hue6[6])
     end
     return T
 end

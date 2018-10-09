@@ -185,7 +185,7 @@ according to the chosen parity (0 or 1).
 """
 function half_gyration!(h::Matrix{Int}, parity)
     T = toggles(h, parity)
-    for i in find(T)
+    for i in findall(!iszero, T)
         y = T[i]
         delta = h[i] - y
         h[i] = y - delta
@@ -290,7 +290,7 @@ Return the arcs that compose the anti-fpl,
 if requested by the keyword `anti`.
 """
 function fpl_arcs(h::Matrix{Int}; anti::Bool = false)
-    zero = anti?1:0
+    zero = anti ? 1 : 0
     T = six_vertex(h)
     n = size(T,1)
     arcs = Vector{Path}()
@@ -372,7 +372,7 @@ function fpl_paths(h::Matrix{Int}; anti::Bool = false, circuit::Bool = false)
             target[p] = [i,i]
         end
     end
-    visited = falses(arc)
+    visited = falses(size(arc))
     v = Vector{Path}()
     for p in borderpoints(n)
         i = target[p][1]
@@ -537,9 +537,9 @@ is of order `n`.
 function alpha(h::Matrix{Int}, entry = 2)
     A = hm_to_asm(h)
     if entry in [-1, 1]
-        countnz(A .== entry)
+        count(A .== entry)
     else
-        countnz(A)
+        count(!iszero, A)
     end
 end
 
@@ -613,7 +613,7 @@ where toggles are coded by negative integers.
 """
 function segment_bottom(h::Matrix{Int})
     h2 = copy(h)
-    i = find(h .< 0)
+    i = findall(h .< 0)
     h2[i] = -h2[i] .- 1
     h2
 end
@@ -625,7 +625,7 @@ Return the maximal hm in a segment coded by the pseudo-hm `h`.
 """
 function segment_top(h::Matrix{Int})
     h2 = copy(h)
-    i = find(h .< 0)
+    i = findall(h .< 0)
     h2[i] = -h2[i] .+ 1
     h2
 end
@@ -637,7 +637,7 @@ Return the kth hm in a segment coded by the pseudo-hm `h`.
 """
 function segment_elt(h::Matrix{Int}, k::Int)
     h2 = copy(h)
-    i = find(h .< 0)
+    i = findall(h .< 0)
     # eps .= 2 .* Base.digits(k, 2, length(i)) .- 1
     eps = 2 * Base.digits(k-1, 2, length(i)) - 1
     h2[i] = -h2[i] .+ eps
@@ -651,7 +651,7 @@ Return a random hm in a segment coded by the pseudo-hm `h`.
 """
 function segment_rand(h::Matrix{Int})
     h2 = copy(h)
-    i = find(h .< 0)
+    i = findall(h .< 0)
     eps = rand([-1,1], length(i))
     h2[i] = -h2[i] .+ eps
     h2
@@ -767,6 +767,7 @@ function forward_sample(n; verbose = 0)
     return h1
 end
 
+using Random
 """
     backward_sample(n [,coeff] [,verbose = k])
 
@@ -779,7 +780,7 @@ may be used to trace execution of the algorithm,
 when `n` is small.
 """
 function backward_sample(n, coeff = 1; verbose = 0)
-    const pmax = 10
+    pmax = 10
     seed = rand(UInt32, pmax)
     # n2 = div(n*n, 4)
     n2 = div(n*n, 2)
@@ -795,7 +796,7 @@ function backward_sample(n, coeff = 1; verbose = 0)
         p = pass
         h1, h2 = min_hm(n), max_hm(n)
         while p > 0
-            srand(seed[p])
+            Random.seed!(seed[p])
             r = run[p]
             verbose > 1 && println("$p, $r :")
             for k in 1:r
@@ -834,6 +835,7 @@ function delta_list(n)
     u
 end
 
+import Printf
 function print_matrix(h::Matrix{Int})
     sup = 1 + maximum(h)
     w = 1 + ceil(Int, log10(sup))
@@ -841,11 +843,11 @@ function print_matrix(h::Matrix{Int})
     for i in 1:m
         for j in 1:n
             if w < 3
-                @printf("%2d", h[i,j])
+                Printf.@printf("%2d", h[i,j])
             elseif w < 4
-                @printf("%3d", h[i,j])
+                Printf.@printf("%3d", h[i,j])
             else
-                @printf("%4d", h[i,j])
+                Printf.@printf("%4d", h[i,j])
             end
         end
         println()
