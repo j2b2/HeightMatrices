@@ -334,11 +334,14 @@ function fpl_arcs(h::Matrix{Int}; anti::Bool = false)
     arcs
 end
 
-function borderpoints(n::Int)
-    a = n%2 == 0 ? 1 : 2
-    u = [[(i,0) for i in 1:2:n]; [(n+1,j) for j in a:2:n]]
-    a = n%2 == 0 ? n : n-1
-    u = [u; [(i,n+1) for i in n:-2:1]; [(0,j) for j in a:-2:1]]
+function borderpoints(n::Int; anti::Bool = false)
+    a = anti ? 2 : 1
+    b = n%2 == 0 ? 1 : 2
+    if anti b = 3 - b end
+    u = [(i,0) for i in a:2:n]
+    append!(u, [(n+1,j) for j in b:2:n])
+    append!(u, [(i,n+1) for i in n+1-a:-2:1])
+    append!(u, [(0,j) for j in n+1-b:-2:1])
 end
 
 """
@@ -374,7 +377,7 @@ function fpl_paths(h::Matrix{Int}; anti::Bool = false, circuit::Bool = false)
     end
     visited = falses(size(arc))
     v = Vector{Path}()
-    for p in borderpoints(n)
+    for p in borderpoints(n, anti = anti)
         i = target[p][1]
         visited[i] && continue
         visited[i] = true
